@@ -12,15 +12,6 @@ interface TodoItemProps {
   onEdit: (id: string, text: string) => void;
 }
 
-function PencilIcon({ size = 14, className = "" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M16.2141 4.98239L17.6158 3.58063C18.39 2.80646 19.6452 2.80646 20.4194 3.58063C21.1935 4.3548 21.1935 5.60998 20.4194 6.38415L19.0176 7.78591M16.2141 4.98239L10.9802 10.2163C9.93493 11.2616 9.41226 11.7842 9.0363 12.4014C8.66034 13.0186 8.31292 14.1258 7.96549 15.2329C7.61807 16.34 8.6602 16.8627 9.76729 16.5152C10.8744 16.1678 11.9815 15.8204 12.5987 15.4444C13.2159 15.0685 13.7386 14.5458 14.7838 13.5005L19.0176 7.78591M16.2141 4.98239L19.0176 7.78591" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-      <path d="M21 12C21 16.2426 21 18.364 19.682 19.682C18.364 21 16.2426 21 12 21C7.75736 21 5.63604 21 4.31802 19.682C3 18.364 3 16.2426 3 12C3 7.75736 3 5.63604 4.31802 4.31802C5.63604 3 7.75736 3 12 3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 function TrashIcon({ size = 14, className = "" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
