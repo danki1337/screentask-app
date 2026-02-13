@@ -97,12 +97,14 @@ export function useSpaces(userId: string | null) {
           return;
         }
 
+        console.log("[useSpaces] snapshot", { count: firestoreSpaces.length, spaces: firestoreSpaces.map(s => ({ id: s.id, name: s.name })) });
         setSpaces(firestoreSpaces);
 
         // Resolve active space ID
         if (firestoreSpaces.length > 0) {
           const storedId = localStorage.getItem(ACTIVE_SPACE_KEY);
           const isValid = firestoreSpaces.some((s) => s.id === storedId);
+          console.log("[useSpaces] resolving activeSpaceId", { storedId, isValid });
           if (!isValid) {
             const firstId = firestoreSpaces[0]!.id;
             setActiveSpaceIdState(firstId);

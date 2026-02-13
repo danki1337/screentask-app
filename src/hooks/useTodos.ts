@@ -42,6 +42,7 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
   useEffect(() => {
     if (!userId || !spaceId) return;
 
+    console.log("[useTodos] subscribing", { userId, spaceId });
     const q = query(
       todosCollection(userId),
       where("spaceId", "==", spaceId),
@@ -50,11 +51,12 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
       q,
       (snapshot) => {
         const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
+        console.log("[useTodos] snapshot received", { spaceId, count: firestoreTodos.length, todos: firestoreTodos.map(t => ({ id: t.id, text: t.text, spaceId: t.spaceId })) });
         firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
         setTodos(firestoreTodos);
       },
       (error) => {
-        console.error("Todos subscription error:", error);
+        console.error("[useTodos] subscription error:", error);
       },
     );
 
