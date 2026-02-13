@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useOverlayState } from "@heroui/react";
 import { Agentation } from "agentation";
 import { Header } from "./components/Header";
@@ -44,13 +43,6 @@ export default function App() {
   const { focusTab, setFocusTab } = useViewMode();
   const settingsState = useOverlayState();
   const editSpacesState = useOverlayState();
-
-  // Prompt login on first open if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      signInWithGoogle();
-    }
-  }, [authLoading]);
 
   return (
     <div className="dark min-h-screen bg-[#0C0C0C] text-zinc-100 font-sans font-medium">
