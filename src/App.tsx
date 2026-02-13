@@ -48,7 +48,7 @@ export default function App() {
           authLoading={authLoading}
         />
         <main className="pt-8 pb-16 flex flex-col gap-6">
-          {authLoading ? (
+          {authLoading || (user && !activeSpaceId) ? (
             <div className="py-24 flex justify-center">
               <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
             </div>
