@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Tabs } from "@heroui/react";
-import type { User } from "firebase/auth";
-import type { FocusTab } from "@/types";
+import type { FocusTab, UserInfo } from "@/types";
 
 function SettingsGearIcon({ size = 20, className = "" }: { size?: number; className?: string }) {
   return (
@@ -45,7 +44,7 @@ function ProfileDropdown({
   onOpenSettings,
   onSignOut,
 }: {
-  user: User;
+  user: UserInfo;
   onOpenSettings: () => void;
   onSignOut: () => void;
 }) {
@@ -132,7 +131,7 @@ interface HeaderProps {
   onOpenSettings: () => void;
   focusTab: FocusTab;
   onFocusTabChange: (tab: FocusTab) => void;
-  user: User | null;
+  user: UserInfo | null;
   onSignIn: () => void;
   onSignOut: () => void;
   authLoading: boolean;

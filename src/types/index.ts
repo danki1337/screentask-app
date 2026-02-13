@@ -18,4 +18,11 @@ export interface AnalysisResult {
   error?: string;
 }
 
+export interface UserInfo {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
+
 export type FocusTab = "now" | "planning";
