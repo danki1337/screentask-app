@@ -47,11 +47,14 @@ export function useSpaces(userId: string | null) {
     localStorage.setItem(ACTIVE_SPACE_KEY, id);
   }, []);
 
-  // Migrate orphaned todos (no spaceId) to a given space
-  const migrateOrphanedTodos = useCallback(async (uid: string, defaultSpaceId: string) => {
+  // Migrate orphaned todos (no spaceId or stale spaceId) to a given space
+  const migrateOrphanedTodos = useCallback(async (uid: string, defaultSpaceId: string, validSpaceIds: Set<string>) => {
     const todosRef = todosCollection(uid);
     const snapshot = await getDocs(todosRef);
-    const orphans = snapshot.docs.filter((d) => !d.data().spaceId);
+    const orphans = snapshot.docs.filter((d) => {
+      const spaceId = d.data().spaceId;
+      return !spaceId || !validSpaceIds.has(spaceId);
+    });
     if (orphans.length === 0) return;
 
     const batch = writeBatch(db);
@@ -91,24 +94,29 @@ export function useSpaces(userId: string | null) {
             order: 0,
           };
           setDoc(spaceDoc(userId, id), defaultSpace)
-            .then(() => migrateOrphanedTodos(userId, id))
+            .then(() => migrateOrphanedTodos(userId, id, new Set([id])))
             .catch((err) => console.error("Failed to create default space:", err));
-          // The onSnapshot will fire again with the new space
           return;
         }
 
-        console.log("[useSpaces] snapshot", { count: firestoreSpaces.length, spaces: firestoreSpaces.map(s => ({ id: s.id, name: s.name })) });
         setSpaces(firestoreSpaces);
 
         // Resolve active space ID
         if (firestoreSpaces.length > 0) {
           const storedId = localStorage.getItem(ACTIVE_SPACE_KEY);
           const isValid = firestoreSpaces.some((s) => s.id === storedId);
-          console.log("[useSpaces] resolving activeSpaceId", { storedId, isValid });
           if (!isValid) {
             const firstId = firestoreSpaces[0]!.id;
             setActiveSpaceIdState(firstId);
             localStorage.setItem(ACTIVE_SPACE_KEY, firstId);
+          }
+
+          // Migrate any todos with stale/missing spaceIds to the first space
+          if (!hasInitializedRef.current) {
+            hasInitializedRef.current = true;
+            const validIds = new Set(firestoreSpaces.map((s) => s.id));
+            migrateOrphanedTodos(userId, firestoreSpaces[0]!.id, validIds)
+              .catch((err) => console.error("Failed to migrate orphaned todos:", err));
           }
         }
       },
