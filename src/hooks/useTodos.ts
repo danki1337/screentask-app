@@ -6,7 +6,6 @@ import {
   deleteDoc,
   doc,
   query,
-  orderBy,
   where,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
@@ -46,14 +45,18 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
     const q = query(
       todosCollection(userId),
       where("spaceId", "==", spaceId),
-      orderBy("order", "asc"),
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
-      // Sort by order, then createdAt as fallback
-      firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
-      setTodos(firestoreTodos);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
+        firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
+        setTodos(firestoreTodos);
+      },
+      (error) => {
+        console.error("Todos subscription error:", error);
+      },
+    );
 
     return unsubscribe;
   }, [userId, spaceId]);
