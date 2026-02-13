@@ -37,15 +37,17 @@ export function useTodos(userId: string | null = null) {
   useEffect(() => {
     if (!userId) return;
 
+    console.log("[useTodos] subscribing to", `users/${userId}/todos`);
     const unsubscribe = onSnapshot(
       todosCollection(userId),
       (snapshot) => {
         const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
+        console.log("[useTodos] onSnapshot fired:", firestoreTodos.length, "todos", snapshot.metadata.fromCache ? "(from cache)" : "(from server)");
         firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
         setTodos(firestoreTodos);
       },
       (error) => {
-        console.error("Todos subscription error:", error);
+        console.error("[useTodos] onSnapshot ERROR:", error.code, error.message);
       },
     );
 
@@ -77,7 +79,9 @@ export function useTodos(userId: string | null = null) {
               t.scheduledDate !== prev[i]?.scheduledDate,
           )
           .forEach((t) => {
-            setDoc(todoDoc(uid, t.id), t);
+            setDoc(todoDoc(uid, t.id), t).catch((err) =>
+              console.error("[useTodos] stale cleanup setDoc FAILED:", err.code, err.message),
+            );
           });
       }
       return updated;
@@ -88,13 +92,19 @@ export function useTodos(userId: string | null = null) {
   const persistToFirestore = useCallback(
     (...todosToSave: Todo[]) => {
       const uid = userIdRef.current;
-      if (!uid) return;
+      if (!uid) {
+        console.warn("[useTodos] persistToFirestore: no uid, skipping");
+        return;
+      }
       todosToSave.forEach((todo) => {
         // Strip undefined values — Firestore throws on undefined fields
         const clean = Object.fromEntries(
           Object.entries(todo).filter(([, v]) => v !== undefined),
         );
-        setDoc(todoDoc(uid, todo.id), clean);
+        console.log("[useTodos] setDoc:", `users/${uid}/todos/${todo.id}`, clean.text);
+        setDoc(todoDoc(uid, todo.id), clean).catch((err) =>
+          console.error("[useTodos] setDoc FAILED:", err.code, err.message, "path:", `users/${uid}/todos/${todo.id}`),
+        );
       });
     },
     [],
@@ -103,7 +113,9 @@ export function useTodos(userId: string | null = null) {
   const deleteFromFirestore = useCallback((id: string) => {
     const uid = userIdRef.current;
     if (!uid) return;
-    deleteDoc(todoDoc(uid, id));
+    deleteDoc(todoDoc(uid, id)).catch((err) =>
+      console.error("[useTodos] deleteDoc FAILED:", err.code, err.message),
+    );
   }, []);
 
   // --- Helper to update state and sync ---
