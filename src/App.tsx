@@ -3,7 +3,6 @@ import { Agentation } from "agentation";
 import { Header } from "./components/Header";
 import { TodoList } from "./components/TodoList";
 import { SettingsModal } from "./components/SettingsModal";
-import { EditSpacesModal } from "./components/EditSpacesModal";
 import { useClipboard } from "./hooks/useClipboard";
 import { useTodos } from "./hooks/useTodos";
 import { useSpaces } from "./hooks/useSpaces";
@@ -16,14 +15,7 @@ import { DEFAULT_OCR_PROMPT } from "./services/ai";
 export default function App() {
   const { pastedImage, clearImage } = useClipboard();
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
-  const {
-    spaces,
-    activeSpaceId,
-    setActiveSpaceId,
-    createSpace,
-    renameSpace,
-    deleteSpace,
-  } = useSpaces(user?.uid ?? null);
+  const { activeSpaceId } = useSpaces(user?.uid ?? null);
   const {
     todos,
     addTodos,
@@ -42,7 +34,6 @@ export default function App() {
   const { ocrPrompt, setOcrPrompt, ocrPromptEnabled, setOcrPromptEnabled } = useOcrPrompt();
   const { focusTab, setFocusTab } = useViewMode();
   const settingsState = useOverlayState();
-  const editSpacesState = useOverlayState();
 
   return (
     <div className="dark min-h-screen bg-[#0C0C0C] text-zinc-100 font-sans font-medium">
@@ -55,11 +46,6 @@ export default function App() {
           onSignIn={signInWithGoogle}
           onSignOut={logout}
           authLoading={authLoading}
-          spaces={spaces}
-          activeSpaceId={activeSpaceId}
-          onSwitchSpace={setActiveSpaceId}
-          onCreateSpace={createSpace}
-          onEditSpaces={editSpacesState.open}
         />
         <main className="pt-8 pb-16 flex flex-col gap-6">
           {authLoading ? (
@@ -120,12 +106,6 @@ export default function App() {
         defaultOcrPrompt={DEFAULT_OCR_PROMPT}
         onSaveOcrPrompt={setOcrPrompt}
         onSetOcrPromptEnabled={setOcrPromptEnabled}
-      />
-      <EditSpacesModal
-        state={editSpacesState}
-        spaces={spaces}
-        onRename={renameSpace}
-        onDelete={deleteSpace}
       />
       {import.meta.env.DEV && <Agentation />}
     </div>

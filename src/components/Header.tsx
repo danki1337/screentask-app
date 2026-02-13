@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Tabs } from "@heroui/react";
 import type { User } from "firebase/auth";
-import type { FocusTab, Space } from "@/types";
-import { SpaceSwitcher } from "./SpaceSwitcher";
+import type { FocusTab } from "@/types";
 
 function SettingsGearIcon({ size = 20, className = "" }: { size?: number; className?: string }) {
   return (
@@ -137,11 +136,6 @@ interface HeaderProps {
   onSignIn: () => void;
   onSignOut: () => void;
   authLoading: boolean;
-  spaces: Space[];
-  activeSpaceId: string | null;
-  onSwitchSpace: (id: string) => void;
-  onCreateSpace: (name: string) => Promise<string | null>;
-  onEditSpaces: () => void;
 }
 
 export function Header({
@@ -152,11 +146,6 @@ export function Header({
   onSignIn,
   onSignOut,
   authLoading,
-  spaces,
-  activeSpaceId,
-  onSwitchSpace,
-  onCreateSpace,
-  onEditSpaces,
 }: HeaderProps) {
   return (
     <motion.header
@@ -165,17 +154,7 @@ export function Header({
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="flex items-center justify-between pt-6 pb-2"
     >
-      {user && spaces.length > 0 ? (
-        <SpaceSwitcher
-          spaces={spaces}
-          activeSpaceId={activeSpaceId}
-          onSwitchSpace={onSwitchSpace}
-          onCreateSpace={onCreateSpace}
-          onEditSpaces={onEditSpaces}
-        />
-      ) : (
-        <div className="w-9" />
-      )}
+      <div className="w-9" />
 
       <Tabs
         selectedKey={focusTab}
