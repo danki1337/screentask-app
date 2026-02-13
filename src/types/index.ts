@@ -1,10 +1,3 @@
-export interface Space {
-  id: string;
-  name: string;
-  createdAt: number;
-  order: number;
-}
-
 export interface Todo {
   id: string;
   text: string;
@@ -16,7 +9,6 @@ export interface Todo {
   isFrog?: boolean;
   scheduledDate?: string;
   order?: number;
-  spaceId?: string;
 }
 
 export interface AnalysisResult {

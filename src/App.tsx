@@ -5,7 +5,6 @@ import { TodoList } from "./components/TodoList";
 import { SettingsModal } from "./components/SettingsModal";
 import { useClipboard } from "./hooks/useClipboard";
 import { useTodos } from "./hooks/useTodos";
-import { useSpaces } from "./hooks/useSpaces";
 import { useAuth } from "./hooks/useAuth";
 import { useApiKey } from "./hooks/useApiKey";
 import { useOcrPrompt } from "./hooks/useOcrPrompt";
@@ -15,7 +14,6 @@ import { DEFAULT_OCR_PROMPT } from "./services/ai";
 export default function App() {
   const { pastedImage, clearImage } = useClipboard();
   const { user, loading: authLoading, signInWithGoogle, logout } = useAuth();
-  const { activeSpaceId } = useSpaces(user?.uid ?? null);
   const {
     todos,
     addTodos,
@@ -29,7 +27,7 @@ export default function App() {
     setScheduledDate,
     addSubtask,
     reorderTodo,
-  } = useTodos(user?.uid ?? null, activeSpaceId);
+  } = useTodos(user?.uid ?? null);
   const { apiKey, setApiKey } = useApiKey();
   const { ocrPrompt, setOcrPrompt, ocrPromptEnabled, setOcrPromptEnabled } = useOcrPrompt();
   const { focusTab, setFocusTab } = useViewMode();
@@ -48,7 +46,7 @@ export default function App() {
           authLoading={authLoading}
         />
         <main className="pt-8 pb-16 flex flex-col gap-6">
-          {authLoading || (user && !activeSpaceId) ? (
+          {authLoading ? (
             <div className="py-24 flex justify-center">
               <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
             </div>

@@ -5,8 +5,6 @@ import {
   setDoc,
   deleteDoc,
   doc,
-  query,
-  where,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import type { Todo } from "@/types";
@@ -19,7 +17,7 @@ function todoDoc(uid: string, todoId: string) {
   return doc(db, "users", uid, "todos", todoId);
 }
 
-export function useTodos(userId: string | null = null, spaceId: string | null = null) {
+export function useTodos(userId: string | null = null) {
   const [todos, setTodos] = useState<Todo[]>([]);
 
   const todosRef = useRef(todos);
@@ -28,26 +26,19 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
 
-  const spaceIdRef = useRef(spaceId);
-  spaceIdRef.current = spaceId;
-
-  // Clear todos when user logs out or space changes
+  // Clear todos when user logs out
   useEffect(() => {
-    if (!userId || !spaceId) {
+    if (!userId) {
       setTodos([]);
     }
-  }, [userId, spaceId]);
+  }, [userId]);
 
   // --- Firestore subscription ---
   useEffect(() => {
-    if (!userId || !spaceId) return;
+    if (!userId) return;
 
-    const q = query(
-      todosCollection(userId),
-      where("spaceId", "==", spaceId),
-    );
     const unsubscribe = onSnapshot(
-      q,
+      todosCollection(userId),
       (snapshot) => {
         const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
         firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
@@ -59,7 +50,7 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
     );
 
     return unsubscribe;
-  }, [userId, spaceId]);
+  }, [userId]);
 
   // --- Reset stale scheduled tasks (past dates) to backlog once per day ---
   const lastCleanupDateRef = useRef<string>("");
@@ -149,25 +140,20 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
   const addTodos = useCallback(
     (texts: string[], description?: string) => {
       const now = Date.now();
-      const currentSpaceId = spaceIdRef.current;
       const newTodos: Todo[] = texts.map((text, i) => ({
         id: crypto.randomUUID(),
         text,
         completed: false,
         createdAt: now + i,
         order: now + i,
-        ...(currentSpaceId ? { spaceId: currentSpaceId } : {}),
         ...(i === 0 && description ? { description } : {}),
       }));
       updateTodos(
         (prev) => [...newTodos, ...prev],
         {
-          changed: () =>
-            // All new todos plus re-ordered existing ones
-            newTodos,
+          changed: () => newTodos,
         },
       );
-      // Persist new todos + order update for existing
       if (userIdRef.current) {
         persistToFirestore(...newTodos);
       }
@@ -179,8 +165,6 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
     (source: string, mainTask: string, subtasks: string[]) => {
       const parentId = crypto.randomUUID();
       const now = Date.now();
-      const currentSpaceId = spaceIdRef.current;
-      const spaceFields = currentSpaceId ? { spaceId: currentSpaceId } : {};
       const parent: Todo = {
         id: parentId,
         text: mainTask,
@@ -188,7 +172,6 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
         createdAt: now,
         order: now,
         source,
-        ...spaceFields,
       };
       const children: Todo[] = subtasks.map((text, i) => ({
         id: crypto.randomUUID(),
@@ -197,7 +180,6 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
         createdAt: now + i + 1,
         order: now + i + 1,
         parentId,
-        ...spaceFields,
       }));
       const allNew = [parent, ...children];
       updateTodos(
@@ -314,7 +296,6 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
 
   const addSubtask = useCallback(
     (parentId: string, text: string) => {
-      const currentSpaceId = spaceIdRef.current;
       const child: Todo = {
         id: crypto.randomUUID(),
         text,
@@ -322,7 +303,6 @@ export function useTodos(userId: string | null = null, spaceId: string | null = 
         createdAt: Date.now(),
         order: Date.now(),
         parentId,
-        ...(currentSpaceId ? { spaceId: currentSpaceId } : {}),
       };
       updateTodos(
         (prev) => {
