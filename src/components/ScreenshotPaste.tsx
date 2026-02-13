@@ -39,10 +39,10 @@ export function ScreenshotPaste({
       );
       if (result.error) {
         setError(result.error);
-      } else if (result.tasks.length === 0) {
+      } else if (!result.mainTask) {
         setError("No actionable tasks found in this screenshot.");
       } else {
-        onTasksExtracted(result.tasks);
+        onTasksExtracted([result.mainTask, ...result.subtasks]);
         clearImage();
       }
     } catch (err: unknown) {

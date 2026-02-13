@@ -17,6 +17,7 @@
     "@heroui/styles": "^3.0.0-beta.6",
     "@hugeicons/core-free-icons": "^3.1.1",
     "@hugeicons/react": "^1.1.5",
+    "firebase": "^12.9.0",
     "framer-motion": "^12.34.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

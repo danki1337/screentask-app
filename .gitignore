@@ -1,5 +1,8 @@
 node_modules
 dist
 *.local
+.env
 # heroui-agents-md
 .heroui-docs/
+.vercel
+.claude/settings.local.json

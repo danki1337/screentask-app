@@ -13,3 +13,35 @@ html {
 ::selection {
   background-color: rgba(99, 102, 241, 0.3);
 }
+
+/* Global cursor:pointer for interactive elements */
+button,
+[role="button"],
+[role="tab"],
+a,
+label,
+select,
+summary,
+[data-slot="tabs-tab"] {
+  cursor: pointer;
+}
+
+/* Primary-colored tabs */
+.tabs--primary [data-slot="tabs-list"] {
+  background-color: rgba(24, 24, 27, 0.8) !important;
+}
+
+.tabs--primary [data-slot="tabs-tab"][data-selected="true"] {
+  color: #e879f9 !important;
+  background-color: rgba(217, 70, 239, 0.15) !important;
+  border-radius: 9999px;
+}
+
+.tabs--primary [data-slot="tabs-tab"]:not([data-selected="true"]) {
+  color: #a1a1aa !important;
+}
+
+.tabs--primary [data-slot="tabs-tab"]:not([data-selected="true"]):hover {
+  opacity: 1 !important;
+  color: #d4d4d8 !important;
+}
