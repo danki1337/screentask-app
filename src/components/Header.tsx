@@ -153,7 +153,7 @@ export function Header({
       transition={{ duration: 0.4, ease: "easeOut" }}
       className="flex items-center justify-between pt-6 pb-2"
     >
-      <div className="w-9" />
+      <div className="w-9 shrink-0" />
 
       <Tabs
         selectedKey={focusTab}
@@ -177,7 +177,7 @@ export function Header({
         </Tabs.List>
       </Tabs>
 
-      <div className="flex items-center justify-end">
+      <div className="w-9 shrink-0 flex items-center justify-end">
         {authLoading ? null : user ? (
           <ProfileDropdown
             user={user}

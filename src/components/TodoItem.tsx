@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import type { Todo } from "@/types";
 
 interface TodoItemProps {
@@ -10,6 +10,7 @@ interface TodoItemProps {
   onEdit: (id: string, text: string) => void;
   onEditDescription?: (id: string, description: string | undefined) => void;
   onSetFrog?: (id: string) => void;
+  onToggleSnooze?: (id: string) => void;
   onAddSubtask?: (parentId: string) => void;
   onScheduleForToday?: (id: string) => void;
   onUnschedule?: (id: string) => void;
@@ -54,6 +55,16 @@ function CalendarRemoveIcon({ size = 14, className = "" }: { size?: number; clas
       <path d="M3 8H21" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
       <path d="M2.5 12.243C2.5 7.88 2.5 5.699 3.793 4.349C5.086 3 7.143 3 11.257 3H12.743C16.857 3 18.914 3 20.207 4.349C21.5 5.699 21.5 7.88 21.5 12.243V12.757C21.5 17.12 21.5 19.301 20.207 20.651C18.914 22 16.857 22 12.743 22H11.257C7.143 22 5.086 22 3.793 20.651C2.5 19.301 2.5 17.12 2.5 12.757V12.243Z" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
       <path d="M14.5 11.5L9.5 16.5M9.5 11.5L14.5 16.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function SnoozeIcon({ size = 14, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 12C4 7.58172 7.58172 4 12 4C14.4 4 16.5 5.1 17.9 6.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+      <path d="M20 12C20 16.4183 16.4183 20 12 20C9.6 20 7.5 18.9 6.1 17.2" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+      <path d="M9 11H15M9 14H13" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -288,7 +299,7 @@ function EditableText({
   );
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onEdit, onEditDescription, onSetFrog, onAddSubtask, onScheduleForToday, onUnschedule, badge, dragHandleProps, isSubtask, completing }: TodoItemProps) {
+export function TodoItem({ todo, onToggle, onDelete, onEdit, onEditDescription, onSetFrog, onToggleSnooze, onAddSubtask, onScheduleForToday, onUnschedule, badge, dragHandleProps, isSubtask, completing }: TodoItemProps) {
   const visuallyDone = todo.completed || completing;
 
   return (
@@ -299,7 +310,7 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onEditDescription, 
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       onClick={() => onToggle(todo.id)}
-      className="group relative flex items-start gap-3 py-3 px-4 -mx-2 rounded-2xl hover:bg-white/[0.04] cursor-pointer"
+      className={`group relative flex items-start gap-3 py-3 px-4 -mx-2 rounded-2xl hover:bg-white/[0.04] cursor-pointer ${todo.isSnoozed ? "opacity-50" : ""}`}
     >
       {isSubtask && <SubtaskArrow />}
 
@@ -347,10 +358,14 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onEditDescription, 
         )}
       </div>
 
-      {/* Badge (e.g. "Planned") - always visible */}
-      {badge && (
-        <span className="shrink-0 text-xs bg-fuchsia-500/10 text-fuchsia-400 rounded-full px-2 py-0.5">
-          {badge}
+      {/* Badge (e.g. "Planned", "Blocked") - always visible */}
+      {(badge || todo.isSnoozed) && (
+        <span className={`shrink-0 text-xs rounded-full px-2 py-0.5 ${
+          todo.isSnoozed
+            ? "bg-amber-500/10 text-amber-400"
+            : "bg-fuchsia-500/10 text-fuchsia-400"
+        }`}>
+          {todo.isSnoozed ? "Blocked" : badge}
         </span>
       )}
 
@@ -369,63 +384,105 @@ export function TodoItem({ todo, onToggle, onDelete, onEdit, onEditDescription, 
       <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 bg-gradient-to-r from-transparent via-[#161616] to-[#161616] pl-6 rounded-r-full"
         onClick={(e) => e.stopPropagation()}>
         {onScheduleForToday && !isSubtask && (
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            onPress={() => onScheduleForToday(todo.id)}
-            className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-blue-400 [transition:none]"
-            style={{ "--button-bg-hover": "rgba(59,130,246,0.1)", "--button-bg-pressed": "rgba(59,130,246,0.1)" } as React.CSSProperties}
-          >
-            <CalendarPlusIcon size={14} className="text-current" />
-          </Button>
+          <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                onPress={() => onScheduleForToday(todo.id)}
+                className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-blue-400 [transition:none]"
+                style={{ "--button-bg-hover": "rgba(59,130,246,0.1)", "--button-bg-pressed": "rgba(59,130,246,0.1)" } as React.CSSProperties}
+              >
+                <CalendarPlusIcon size={14} className="text-current" />
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content className="text-xs">Plan for today</Tooltip.Content>
+          </Tooltip>
         )}
         {onUnschedule && !isSubtask && (
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            onPress={() => onUnschedule(todo.id)}
-            className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-orange-400 [transition:none]"
-            style={{ "--button-bg-hover": "rgba(251,146,60,0.1)", "--button-bg-pressed": "rgba(251,146,60,0.1)" } as React.CSSProperties}
-          >
-            <CalendarRemoveIcon size={14} className="text-current" />
-          </Button>
+          <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                onPress={() => onUnschedule(todo.id)}
+                className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-orange-400 [transition:none]"
+                style={{ "--button-bg-hover": "rgba(251,146,60,0.1)", "--button-bg-pressed": "rgba(251,146,60,0.1)" } as React.CSSProperties}
+              >
+                <CalendarRemoveIcon size={14} className="text-current" />
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content className="text-xs">Unschedule</Tooltip.Content>
+          </Tooltip>
         )}
         {onAddSubtask && !isSubtask && (
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            onPress={() => onAddSubtask(todo.id)}
-            className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-zinc-300 [transition:none]"
-            style={{ "--button-bg-hover": "rgba(161,161,170,0.1)", "--button-bg-pressed": "rgba(161,161,170,0.1)" } as React.CSSProperties}
-          >
-            <PlusIcon size={12} className="text-current" />
-          </Button>
+          <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                onPress={() => onAddSubtask(todo.id)}
+                className="w-8 h-8 min-w-8 rounded-full text-zinc-500 hover:text-zinc-300 [transition:none]"
+                style={{ "--button-bg-hover": "rgba(161,161,170,0.1)", "--button-bg-pressed": "rgba(161,161,170,0.1)" } as React.CSSProperties}
+              >
+                <PlusIcon size={12} className="text-current" />
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content className="text-xs">Add subtask</Tooltip.Content>
+          </Tooltip>
+        )}
+        {onToggleSnooze && !isSubtask && (
+          <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                onPress={() => onToggleSnooze(todo.id)}
+                className={`w-8 h-8 min-w-8 rounded-full [transition:none] ${todo.isSnoozed ? "text-amber-400 hover:text-amber-300" : "text-zinc-500 hover:text-amber-400"}`}
+                style={{ "--button-bg-hover": todo.isSnoozed ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.1)", "--button-bg-pressed": todo.isSnoozed ? "rgba(245,158,11,0.15)" : "rgba(245,158,11,0.1)" } as React.CSSProperties}
+              >
+                <SnoozeIcon size={14} className="text-current" />
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content className="text-xs">{todo.isSnoozed ? "Unblock" : "Block"}</Tooltip.Content>
+          </Tooltip>
         )}
         {onSetFrog && !isSubtask && (
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            onPress={() => onSetFrog(todo.id)}
-            className={`w-8 h-8 min-w-8 rounded-full [transition:none] ${todo.isFrog ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300"}`}
-            style={{ "--button-bg-hover": todo.isFrog ? "rgba(34,197,94,0.15)" : "rgba(161,161,170,0.1)", "--button-bg-pressed": todo.isFrog ? "rgba(34,197,94,0.15)" : "rgba(161,161,170,0.1)" } as React.CSSProperties}
-          >
-            🐸
-          </Button>
+          <Tooltip delay={0} closeDelay={0}>
+            <Tooltip.Trigger>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                onPress={() => onSetFrog(todo.id)}
+                className={`w-8 h-8 min-w-8 rounded-full [transition:none] ${todo.isFrog ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300"}`}
+                style={{ "--button-bg-hover": todo.isFrog ? "rgba(34,197,94,0.15)" : "rgba(161,161,170,0.1)", "--button-bg-pressed": todo.isFrog ? "rgba(34,197,94,0.15)" : "rgba(161,161,170,0.1)" } as React.CSSProperties}
+              >
+                🐸
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content className="text-xs">{todo.isFrog ? "Remove frog" : "Eat the frog"}</Tooltip.Content>
+          </Tooltip>
         )}
-        <Button
-          isIconOnly
-          size="sm"
-          variant="ghost"
-          onPress={() => onDelete(todo.id)}
-          className="w-8 h-8 min-w-8 rounded-full text-red-400 hover:text-red-300 [transition:none]"
-          style={{ "--button-bg-hover": "rgba(239,68,68,0.15)", "--button-bg-pressed": "rgba(239,68,68,0.15)" } as React.CSSProperties}
-        >
-          <TrashIcon size={14} className="text-current" />
-        </Button>
+        <Tooltip delay={0} closeDelay={0}>
+          <Tooltip.Trigger>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              onPress={() => onDelete(todo.id)}
+              className="w-8 h-8 min-w-8 rounded-full text-red-400 hover:text-red-300 [transition:none]"
+              style={{ "--button-bg-hover": "rgba(239,68,68,0.15)", "--button-bg-pressed": "rgba(239,68,68,0.15)" } as React.CSSProperties}
+            >
+              <TrashIcon size={14} className="text-current" />
+            </Button>
+          </Tooltip.Trigger>
+          <Tooltip.Content className="text-xs">Delete</Tooltip.Content>
+        </Tooltip>
       </div>
     </motion.div>
   );
@@ -472,16 +529,21 @@ export function CompletedTodoItem({
 
       <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent via-[#161616] to-[#161616] pl-6 rounded-r-full"
         onClick={(e) => e.stopPropagation()}>
-        <Button
-          isIconOnly
-          size="sm"
-          variant="ghost"
-          onPress={() => onDelete(todo.id)}
-          className="w-8 h-8 min-w-8 rounded-full text-red-400 hover:text-red-300 [transition:none]"
-          style={{ "--button-bg-hover": "rgba(239,68,68,0.15)", "--button-bg-pressed": "rgba(239,68,68,0.15)" } as React.CSSProperties}
-        >
-          <TrashIcon size={14} className="text-current" />
-        </Button>
+        <Tooltip delay={0} closeDelay={0}>
+          <Tooltip.Trigger>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="ghost"
+              onPress={() => onDelete(todo.id)}
+              className="w-8 h-8 min-w-8 rounded-full text-red-400 hover:text-red-300 [transition:none]"
+              style={{ "--button-bg-hover": "rgba(239,68,68,0.15)", "--button-bg-pressed": "rgba(239,68,68,0.15)" } as React.CSSProperties}
+            >
+              <TrashIcon size={14} className="text-current" />
+            </Button>
+          </Tooltip.Trigger>
+          <Tooltip.Content className="text-xs">Delete</Tooltip.Content>
+        </Tooltip>
       </div>
     </motion.div>
   );

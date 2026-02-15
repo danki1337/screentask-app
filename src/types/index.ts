@@ -7,6 +7,7 @@ export interface Todo {
   parentId?: string;
   source?: string;
   isFrog?: boolean;
+  isSnoozed?: boolean;
   scheduledDate?: string;
   order?: number;
 }

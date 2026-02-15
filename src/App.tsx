@@ -23,6 +23,7 @@ export default function App() {
     editTodo,
     editDescription,
     setFrog,
+    toggleSnooze,
     scheduleForToday,
     setScheduledDate,
     addSubtask,
@@ -45,7 +46,7 @@ export default function App() {
           onSignOut={logout}
           authLoading={authLoading}
         />
-        <main className="pt-8 pb-16 flex flex-col gap-6">
+        <main className="pt-8 flex flex-col gap-6">
           {authLoading ? (
             <div className="py-24 flex justify-center">
               <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
@@ -78,6 +79,7 @@ export default function App() {
               onEdit={editTodo}
               onEditDescription={editDescription}
               onSetFrog={setFrog}
+              onToggleSnooze={toggleSnooze}
               onAddTodo={(text, desc) => addTodos([text], desc)}
               onAddSubtask={addSubtask}
               onOcrTasks={addOcrTasks}

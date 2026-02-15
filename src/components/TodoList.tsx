@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, CloseButton, Spinner } from "@heroui/react";
 import { FocusMode } from "./FocusMode";
@@ -22,6 +22,7 @@ interface TodoListProps {
   onEdit: (id: string, text: string) => void;
   onEditDescription: (id: string, description: string | undefined) => void;
   onSetFrog: (id: string) => void;
+  onToggleSnooze: (id: string) => void;
   onAddTodo: (text: string, description?: string) => void;
   onAddSubtask: (parentId: string, text: string) => void;
   onOcrTasks: (source: string, mainTask: string, subtasks: string[]) => void;
@@ -44,6 +45,7 @@ export function TodoList({
   onEdit,
   onEditDescription,
   onSetFrog,
+  onToggleSnooze,
   onAddTodo,
   onAddSubtask,
   onOcrTasks,
@@ -64,6 +66,18 @@ export function TodoList({
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const completingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Press Space anywhere to focus the task input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " && document.activeElement === document.body) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleToggleWithDelay = useCallback((id: string) => {
     const todo = todos.find((t) => t.id === id);
@@ -167,13 +181,9 @@ export function TodoList({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
-      className="sticky bottom-0 pb-2 bg-gradient-to-t from-[#0C0C0C] from-80% to-transparent"
+      className="fixed bottom-0 left-0 right-0 z-50 px-5"
     >
-      <div
-        className="pt-[20vh] -mt-[20vh] cursor-text"
-        onClick={() => inputRef.current?.focus()}
-      />
-      <div className={`border border-fuchsia-500/50 bg-zinc-900/80 backdrop-blur-sm overflow-hidden ${pastedImage ? "rounded-3xl" : "rounded-full"}`}>
+      <div className="max-w-xl mx-auto border border-transparent focus-within:border-fuchsia-500/50 bg-zinc-900/95 backdrop-blur-xl overflow-hidden rounded-3xl mb-4 transition-colors">
         {/* Screenshot preview inside input container */}
         <AnimatePresence>
           {pastedImage && (
@@ -215,77 +225,76 @@ export function TodoList({
           )}
         </AnimatePresence>
 
-        {/* Input row */}
-        <div className="flex items-end gap-0 py-1.5 px-1">
-            <textarea
-              ref={inputRef}
-              autoFocus
-              rows={1}
-              placeholder={pastedImage ? "Add a task or extract from screenshot..." : "Add a task..."}
-              value={newTask}
-              className="flex-1 bg-transparent resize-none px-4 py-2 text-[15px] text-zinc-200 placeholder:text-zinc-600 outline-none leading-relaxed"
-              onChange={(e) => {
-                setNewTask(e.target.value);
-                // Auto-resize
-                e.target.style.height = "auto";
-                e.target.style.height = e.target.scrollHeight + "px";
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleAddTask();
-                }
-              }}
-            />
-            <div className="flex items-center gap-1.5 pr-2">
-              <AnimatePresence>
-                {pastedImage && !isAnalyzing && (
-                  <motion.div
-                    initial={{ opacity: 0, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, filter: "blur(4px)" }}
-                    transition={{ duration: 0.15 }}
+        {/* Input row — textarea + button side by side */}
+        <div className="flex items-center gap-0 py-1.5 px-1">
+          <textarea
+            ref={inputRef}
+            autoFocus
+            rows={1}
+            placeholder={pastedImage ? "Add a task or extract from screenshot..." : "Press Space to start typing..."}
+            value={newTask}
+            className="flex-1 bg-transparent resize-none px-4 py-2 text-[15px] text-zinc-200 placeholder:text-zinc-600 outline-none leading-relaxed"
+            onChange={(e) => {
+              setNewTask(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleAddTask();
+              }
+            }}
+          />
+          <div className="flex items-center shrink-0 pr-2">
+            <AnimatePresence>
+              {pastedImage && !isAnalyzing && (
+                <motion.div
+                  initial={{ opacity: 0, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, filter: "blur(4px)" }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    size="sm"
+                    onPress={handleAnalyze}
+                    aria-label="Extract tasks from screenshot"
+                    className="rounded-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-3"
                   >
-                    <Button
-                      size="sm"
-                      onPress={handleAnalyze}
-                      aria-label="Extract tasks from screenshot"
-                      className="rounded-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-3"
-                    >
-                      Extract Tasks
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {newTask.trim() && !pastedImage && (
-                  <motion.div
-                    initial={{ opacity: 0, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, filter: "blur(4px)" }}
-                    transition={{ duration: 0.15 }}
+                    Extract Tasks
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {newTask.trim() && !pastedImage && (
+                <motion.div
+                  initial={{ opacity: 0, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, filter: "blur(4px)" }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    size="sm"
+                    onPress={handleAddTask}
+                    aria-label="Add task"
+                    className="rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 text-white gap-1.5 px-3"
                   >
-                    <Button
-                      size="sm"
-                      onPress={handleAddTask}
-                      aria-label="Add task"
-                      className="rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 text-white gap-1.5 px-3"
-                    >
-                      <ArrowUpIcon size={14} className="text-current" />
-                      Add task
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    <ArrowUpIcon size={14} className="text-current" />
+                    Add task
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </motion.div>
   );
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)]">
-      <div className="flex-1 pb-4">
+    <>
+      <div className="flex flex-col pb-24">
         <FocusMode
           todos={todos}
           childrenByParent={childrenByParent}
@@ -295,6 +304,7 @@ export function TodoList({
           onEdit={onEdit}
           onEditDescription={onEditDescription}
           onSetFrog={onSetFrog}
+          onToggleSnooze={onToggleSnooze}
           onScheduleForToday={onScheduleForToday}
           onUnschedule={onUnschedule}
           onReorderTodo={onReorderTodo}
@@ -304,6 +314,6 @@ export function TodoList({
         />
       </div>
       {inputBar}
-    </div>
+    </>
   );
 }

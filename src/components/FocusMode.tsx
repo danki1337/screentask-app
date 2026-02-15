@@ -78,6 +78,7 @@ interface FocusModeProps {
   onEdit: (id: string, text: string) => void;
   onEditDescription: (id: string, description: string | undefined) => void;
   onSetFrog: (id: string) => void;
+  onToggleSnooze: (id: string) => void;
   onScheduleForToday: (id: string) => void;
   onUnschedule: (id: string) => void;
   onReorderTodo: (activeId: string, overId: string) => void;
@@ -95,6 +96,7 @@ export function FocusMode({
   onEdit,
   onEditDescription,
   onSetFrog,
+  onToggleSnooze,
   onScheduleForToday,
   onUnschedule,
   onReorderTodo,
@@ -166,6 +168,7 @@ export function FocusMode({
             onEdit={onEdit}
             onEditDescription={onEditDescription}
             onSetFrog={onSetFrog}
+            onToggleSnooze={onToggleSnooze}
             onAddSubtask={onAddSubtask}
             onSwitchToPlanning={() => onFocusTabChange("planning")}
           />
@@ -189,6 +192,7 @@ export function FocusMode({
             onEdit={onEdit}
             onEditDescription={onEditDescription}
             onSetFrog={onSetFrog}
+            onToggleSnooze={onToggleSnooze}
             onScheduleForToday={onScheduleForToday}
             onUnschedule={onUnschedule}
             onReorderTodo={onReorderTodo}
@@ -212,6 +216,7 @@ function NowTab({
   onEdit,
   onEditDescription,
   onSetFrog,
+  onToggleSnooze,
   onAddSubtask,
   onSwitchToPlanning,
 }: {
@@ -226,6 +231,7 @@ function NowTab({
   onEdit: (id: string, text: string) => void;
   onEditDescription: (id: string, description: string | undefined) => void;
   onSetFrog: (id: string) => void;
+  onToggleSnooze: (id: string) => void;
   onAddSubtask: (parentId: string, text: string) => void;
   onSwitchToPlanning: () => void;
 }) {
@@ -287,6 +293,7 @@ function NowTab({
           onEdit={onEdit}
           onEditDescription={onEditDescription}
           onSetFrog={onSetFrog}
+          onToggleSnooze={onToggleSnooze}
           onAddSubtask={() => setAddingSubtaskFor(currentTask.id)}
           completing={completingIds.has(currentTask.id)}
         />
@@ -333,6 +340,7 @@ function SortableTodoGroup({
   onEdit,
   onEditDescription,
   onSetFrog,
+  onToggleSnooze,
   onAddSubtask,
   onScheduleForToday,
   onUnschedule,
@@ -348,6 +356,7 @@ function SortableTodoGroup({
   onEdit: (id: string, text: string) => void;
   onEditDescription: (id: string, description: string | undefined) => void;
   onSetFrog: (id: string) => void;
+  onToggleSnooze: (id: string) => void;
   onAddSubtask: (parentId: string, text: string) => void;
   onScheduleForToday?: (id: string) => void;
   onUnschedule?: (id: string) => void;
@@ -380,6 +389,7 @@ function SortableTodoGroup({
         onEdit={onEdit}
         onEditDescription={onEditDescription}
         onSetFrog={onSetFrog}
+        onToggleSnooze={onToggleSnooze}
         onAddSubtask={() => onSetAddingSubtask(todo.id)}
         onScheduleForToday={isPlanned ? undefined : onScheduleForToday}
         onUnschedule={isPlanned ? onUnschedule : undefined}
@@ -429,6 +439,7 @@ function PlanningTab({
   onEdit,
   onEditDescription,
   onSetFrog,
+  onToggleSnooze,
   onScheduleForToday,
   onUnschedule,
   onReorderTodo,
@@ -444,6 +455,7 @@ function PlanningTab({
   onEdit: (id: string, text: string) => void;
   onEditDescription: (id: string, description: string | undefined) => void;
   onSetFrog: (id: string) => void;
+  onToggleSnooze: (id: string) => void;
   onScheduleForToday: (id: string) => void;
   onUnschedule: (id: string) => void;
   onReorderTodo: (activeId: string, overId: string) => void;
@@ -456,14 +468,17 @@ function PlanningTab({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  // Split tasks into groups: frog first, then planned, then rest
-  const { frogTask, plannedTasks, otherTasks } = useMemo(() => {
+  // Split tasks into groups: frog first, then planned, then rest (snoozed separated)
+  const { frogTask, plannedTasks, otherTasks, snoozedTasks } = useMemo(() => {
     let frog: Todo | null = null;
     const planned: Todo[] = [];
     const other: Todo[] = [];
+    const snoozed: Todo[] = [];
 
     for (const t of tasks) {
-      if (t.isFrog) {
+      if (t.isSnoozed) {
+        snoozed.push(t);
+      } else if (t.isFrog) {
         frog = t;
       } else if (t.scheduledDate === today) {
         planned.push(t);
@@ -472,7 +487,7 @@ function PlanningTab({
       }
     }
 
-    return { frogTask: frog, plannedTasks: planned, otherTasks: other };
+    return { frogTask: frog, plannedTasks: planned, otherTasks: other, snoozedTasks: snoozed };
   }, [tasks, today]);
 
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
@@ -483,6 +498,8 @@ function PlanningTab({
       onReorderTodo(active.id as string, over.id as string);
     }
   };
+
+  const [showBlocked, setShowBlocked] = useState(false);
 
   if (tasks.length === 0 && completedTodos.length === 0) {
     return (
@@ -515,6 +532,7 @@ function PlanningTab({
               onEdit={onEdit}
               onEditDescription={onEditDescription}
               onSetFrog={onSetFrog}
+              onToggleSnooze={onToggleSnooze}
               onAddSubtask={onAddSubtask}
               onScheduleForToday={onScheduleForToday}
               onUnschedule={onUnschedule}
@@ -544,6 +562,7 @@ function PlanningTab({
                     onEdit={onEdit}
                     onEditDescription={onEditDescription}
                     onSetFrog={onSetFrog}
+                    onToggleSnooze={onToggleSnooze}
                     onAddSubtask={onAddSubtask}
                     onScheduleForToday={onScheduleForToday}
                     onUnschedule={onUnschedule}
@@ -580,6 +599,7 @@ function PlanningTab({
                     onEdit={onEdit}
                     onEditDescription={onEditDescription}
                     onSetFrog={onSetFrog}
+                    onToggleSnooze={onToggleSnooze}
                     onAddSubtask={onAddSubtask}
                     onScheduleForToday={onScheduleForToday}
                     onSetAddingSubtask={setAddingSubtaskFor}
@@ -591,79 +611,162 @@ function PlanningTab({
         </SortableContext>
       </DndContext>
 
-      {/* Completed section */}
-      {completedTodos.length > 0 && (
-        <div className="mt-4">
-          <AnimatePresence>
-            {showCompleted && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="overflow-hidden mb-3"
-              >
-                <div className="flex flex-col">
-                  <AnimatePresence>
-                    {completedTodos.map((todo, index) => {
-                      const children = childrenByParent.get(todo.id) || [];
-                      return (
-                        <div key={todo.id}>
-                          {index > 0 && (
-                            <div className="border-t border-dashed border-zinc-800 mx-4 my-1" />
-                          )}
-                          <CompletedTodoItem
-                            todo={todo}
-                            onToggle={onToggle}
-                            onDelete={onDelete}
-                            onEdit={onEdit}
-                          />
-                          {children.length > 0 && (
-                            <div className="flex flex-col">
-                              {children.map((child) => (
-                                <CompletedTodoItem
-                                  key={child.id}
-                                  todo={child}
-                                  onToggle={onToggle}
-                                  onDelete={onDelete}
-                                  onEdit={onEdit}
-                                  isSubtask
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <motion.div layout className="flex justify-center py-2">
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                onPress={() => setShowCompleted(!showCompleted)}
-                className="rounded-full px-6 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 text-sm"
-                style={{ "--button-bg": "rgba(39,39,42,0.6)", "--button-bg-hover": "#27272a", "--button-bg-pressed": "#27272a" } as React.CSSProperties}
-              >
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={showCompleted ? "hide" : "show"}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.15 }}
+      {/* Bottom buttons row: Blocked + Completed */}
+      {(snoozedTasks.length > 0 || completedTodos.length > 0) && (
+        <div className="mt-4 flex flex-col gap-2">
+          {/* Blocked section */}
+          {snoozedTasks.length > 0 && (
+            <>
+              <AnimatePresence>
+                {showBlocked && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="overflow-hidden mb-1"
                   >
-                    {showCompleted ? "Hide completed" : `${completedTodos.length} completed`}
-                  </motion.span>
-                </AnimatePresence>
-              </Button>
-            </motion.div>
-          </motion.div>
+                    <div className="flex flex-col">
+                      {snoozedTasks.map((todo, index) => {
+                        const children = childrenByParent.get(todo.id) || [];
+                        return (
+                          <div key={todo.id}>
+                            {index > 0 && (
+                              <div className="border-t border-dashed border-zinc-800 mx-4 my-1" />
+                            )}
+                            <TodoItem
+                              todo={todo}
+                              onToggle={onToggle}
+                              onDelete={onDelete}
+                              onEdit={onEdit}
+                              onEditDescription={onEditDescription}
+                              onSetFrog={onSetFrog}
+                              onToggleSnooze={onToggleSnooze}
+                            />
+                            {children.length > 0 && (
+                              <div className="flex flex-col">
+                                {children.map((child) => (
+                                  <TodoItem
+                                    key={child.id}
+                                    todo={child}
+                                    onToggle={onToggle}
+                                    onDelete={onDelete}
+                                    onEdit={onEdit}
+                                    onEditDescription={onEditDescription}
+                                    isSubtask
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.div layout className="flex justify-center py-1">
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => setShowBlocked(!showBlocked)}
+                    className="rounded-full px-6 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400/80 hover:text-amber-300 text-sm"
+                    style={{ "--button-bg": "rgba(245,158,11,0.1)", "--button-bg-hover": "rgba(245,158,11,0.2)", "--button-bg-pressed": "rgba(245,158,11,0.2)" } as React.CSSProperties}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={showBlocked ? "hide" : "show"}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {showBlocked ? "Hide blocked" : `${snoozedTasks.length} blocked`}
+                      </motion.span>
+                    </AnimatePresence>
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </>
+          )}
+
+          {/* Completed section */}
+          {completedTodos.length > 0 && (
+            <>
+              <AnimatePresence>
+                {showCompleted && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="overflow-hidden mb-1"
+                  >
+                    <div className="flex flex-col">
+                      <AnimatePresence>
+                        {completedTodos.map((todo, index) => {
+                          const children = childrenByParent.get(todo.id) || [];
+                          return (
+                            <div key={todo.id}>
+                              {index > 0 && (
+                                <div className="border-t border-dashed border-zinc-800 mx-4 my-1" />
+                              )}
+                              <CompletedTodoItem
+                                todo={todo}
+                                onToggle={onToggle}
+                                onDelete={onDelete}
+                                onEdit={onEdit}
+                              />
+                              {children.length > 0 && (
+                                <div className="flex flex-col">
+                                  {children.map((child) => (
+                                    <CompletedTodoItem
+                                      key={child.id}
+                                      todo={child}
+                                      onToggle={onToggle}
+                                      onDelete={onDelete}
+                                      onEdit={onEdit}
+                                      isSubtask
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.div layout className="flex justify-center py-1">
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => setShowCompleted(!showCompleted)}
+                    className="rounded-full px-6 bg-zinc-800/60 hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 text-sm"
+                    style={{ "--button-bg": "rgba(39,39,42,0.6)", "--button-bg-hover": "#27272a", "--button-bg-pressed": "#27272a" } as React.CSSProperties}
+                  >
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={showCompleted ? "hide" : "show"}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {showCompleted ? "Hide completed" : `${completedTodos.length} completed`}
+                      </motion.span>
+                    </AnimatePresence>
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </>
+          )}
         </div>
       )}
     </div>

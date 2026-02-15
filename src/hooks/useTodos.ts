@@ -17,6 +17,43 @@ function todoDoc(uid: string, todoId: string) {
   return doc(db, "users", uid, "todos", todoId);
 }
 
+// --- Backup helpers ---
+const BACKUP_KEY = "screentask-backup";
+const BACKUP_HISTORY_KEY = "screentask-backup-history";
+const MAX_HISTORY = 10;
+
+function saveBackup(uid: string, todos: Todo[]) {
+  try {
+    const entry = { uid, todos, ts: Date.now() };
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(entry));
+
+    // Append to rolling history (keep last MAX_HISTORY snapshots with >0 todos)
+    if (todos.length > 0) {
+      const raw = localStorage.getItem(BACKUP_HISTORY_KEY);
+      const history: { uid: string; todos: Todo[]; ts: number }[] = raw ? JSON.parse(raw) : [];
+      history.push(entry);
+      // Keep only the last MAX_HISTORY entries for this user
+      const forUser = history.filter((h) => h.uid === uid).slice(-MAX_HISTORY);
+      const forOthers = history.filter((h) => h.uid !== uid);
+      localStorage.setItem(BACKUP_HISTORY_KEY, JSON.stringify([...forOthers, ...forUser]));
+    }
+  } catch {
+    // localStorage full or unavailable — silently ignore
+  }
+}
+
+function loadBackup(uid: string): { todos: Todo[]; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    if (entry.uid !== uid) return null;
+    return { todos: entry.todos, ts: entry.ts };
+  } catch {
+    return null;
+  }
+}
+
 export function useTodos(userId: string | null = null) {
   const [todos, setTodos] = useState<Todo[]>([]);
 
@@ -26,26 +63,71 @@ export function useTodos(userId: string | null = null) {
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
 
+  const isFirstSnapshot = useRef(true);
+
   // Clear todos when user logs out
   useEffect(() => {
     if (!userId) {
       setTodos([]);
+      isFirstSnapshot.current = true;
     }
   }, [userId]);
+
+  // --- Backup todos to localStorage on every change ---
+  useEffect(() => {
+    if (userId && todos.length > 0) {
+      saveBackup(userId, todos);
+    }
+  }, [todos, userId]);
 
   // --- Firestore subscription ---
   useEffect(() => {
     if (!userId) return;
+    isFirstSnapshot.current = true;
 
     const unsubscribe = onSnapshot(
       todosCollection(userId),
       (snapshot) => {
         const firestoreTodos: Todo[] = snapshot.docs.map((d) => d.data() as Todo);
         firestoreTodos.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
+
+        // Auto-recovery: if first snapshot is empty but we have a recent backup, restore it
+        if (isFirstSnapshot.current && firestoreTodos.length === 0) {
+          const backup = loadBackup(userId);
+          if (backup && backup.todos.length > 0) {
+            const ageMinutes = (Date.now() - backup.ts) / 60000;
+            if (ageMinutes < 60) {
+              console.warn(`[useTodos] Firestore empty but backup has ${backup.todos.length} todos (${Math.round(ageMinutes)}min old). Restoring...`);
+              setTodos(backup.todos);
+              // Re-persist backup to Firestore
+              const uid = userId;
+              backup.todos.forEach((todo) => {
+                const clean = Object.fromEntries(
+                  Object.entries(todo).filter(([, v]) => v !== undefined),
+                );
+                setDoc(todoDoc(uid, todo.id), clean).catch((err) =>
+                  console.error("[useTodos] backup restore setDoc FAILED:", err.code, err.message),
+                );
+              });
+              isFirstSnapshot.current = false;
+              return;
+            }
+          }
+        }
+
+        isFirstSnapshot.current = false;
         setTodos(firestoreTodos);
       },
       (error) => {
         console.error("[useTodos] onSnapshot ERROR:", error.code, error.message);
+        // On error, try to load from backup
+        if (userId) {
+          const backup = loadBackup(userId);
+          if (backup && backup.todos.length > 0) {
+            console.warn(`[useTodos] Falling back to backup (${backup.todos.length} todos)`);
+            setTodos(backup.todos);
+          }
+        }
       },
     );
 
@@ -281,6 +363,15 @@ export function useTodos(userId: string | null = null) {
     [updateTodos],
   );
 
+  const toggleSnooze = useCallback(
+    (id: string) => {
+      updateTodos((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, isSnoozed: !t.isSnoozed } : t)),
+      );
+    },
+    [updateTodos],
+  );
+
   const scheduleForToday = useCallback(
     (id: string) => {
       const today = new Date().toISOString().split("T")[0];
@@ -375,6 +466,7 @@ export function useTodos(userId: string | null = null) {
     editTodo,
     editDescription,
     setFrog,
+    toggleSnooze,
     scheduleForToday,
     setScheduledDate,
     addSubtask,
